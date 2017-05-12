@@ -1,19 +1,14 @@
-import Dep from './dep'
-
-export class Observer {
-    constructor (data) {
-        this.data = data;
-        this.walk(data);
-    }
-
-    walk (data) {
-        const keys = Object.keys(data);
-        for (let i = 0; i < keys.length; i++) {
-            defineReactive(data, keys[i], data[keys[i]]);
-        }
-    }
+function Observer(data) {
+    this.data = data;
+    this.walk(data);
 }
 
+Observer.prototype.walk = function(data) {
+    const keys = Object.keys(data);
+    for (let i = 0; i < keys.length; i++) {
+        defineReactive(data, keys[i], data[keys[i]]);
+    }
+};
 
 function defineReactive(obj, key, val) {
     const dep = new Dep();
@@ -23,14 +18,14 @@ function defineReactive(obj, key, val) {
     Object.defineProperty(obj, key, {
         enumerable: true,
         configurable: true,
-        get: function () {
+        get: function() {
             if (Dep.target) {
                 dep.depend();
             }
 
             return val;
         },
-        set: function (newVal) {
+        set: function(newVal) {
             if (newVal === val) {
                 return;
             }
