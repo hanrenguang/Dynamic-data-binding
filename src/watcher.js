@@ -1,5 +1,5 @@
 function Watcher(vm, expOrFn, cb) {
-    this.vm = vm;
+    this.$vm = vm;
     this.cb = cb;
     this.expOrFn = expOrFn;
     this.depIds = new Set();
@@ -14,7 +14,7 @@ function Watcher(vm, expOrFn, cb) {
 }
 
 Watcher.prototype.get = function() {
-    const vm = this.vm;
+    const vm = this.$vm;
     Dep.target = this;
     let value = this.getter.call(vm, vm);
     Dep.target = null;
@@ -39,7 +39,7 @@ Watcher.prototype.run = function() {
 
     if (value !== oldVal) {
         this.value = value;
-        this.cb.call(this.vm, value, oldVal);
+        this.cb.call(this.$vm, value, oldVal);
     }
 };
 

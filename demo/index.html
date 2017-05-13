@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>test</title>
+</head>
+
+<body>
+    <div class="test">
+        {{ hello }}
+    </div>
+    <script type="text/javascript" src="../src/dep.js"></script>
+    <script type="text/javascript" src="../src/observer.js"></script>
+    <script type="text/javascript" src="../src/watcher.js"></script>
+    <script type="text/javascript" src="../src/compile.js"></script>
+    <script type="text/javascript" src="../src/hue.js"></script>
+    <script type="text/javascript">
+        let vm = new Hue({
+            el: '.test',
+            data: {
+                hello: "Hello world!"
+            }
+        });
+
+        vm.$watch("hello", function () {
+            console.log("My GitHub is https://github.com/hanrenguang!");
+        });
+
+        setTimeout(function () {
+            vm.hello = "https://github.com/hanrenguang";
+        }, 3000);
+    </script>
+</body>
+
+</html>
