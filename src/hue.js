@@ -9,7 +9,7 @@ function Hue(options) {
 
     observe(data);
 
-    this.$compile = new Compile(this, options.el || document.body);
+    self.$compile = new Compile(self, options.el || document.body);
 }
 
 Hue.prototype.$watch = function(key, cb) {

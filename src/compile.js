@@ -4,7 +4,7 @@ function Compile(vm, el) {
         ? el
         : document.querySelector(el);
 
-    if (this.el) {
+    if (this.$el) {
         this.$fragment = this.node2Fragment(this.$el);
         this.init();
         this.$el.appendChild(this.$fragment);
@@ -79,7 +79,7 @@ let compileUtil = {
 
     _getVMVal: function(vm, exp) {
         let val = vm;
-        exp = exp.split('.');
+        exp = exp.trim().split('.');
         exp.forEach(function(k) {
             val = val[k];
         });
@@ -89,7 +89,7 @@ let compileUtil = {
 
 let updater = {
     textUpdater: function(node, value) {
-        node.textContent = typeof value == 'undefined'
+        node.textContent = typeof value === 'undefined'
             ? ''
             : value;
     }
