@@ -8,7 +8,8 @@
 
 <body>
     <div class="test">
-        {{ hello }}
+        <p>{{user.name}}</p>
+        <p>{{user.age}}</p>
     </div>
     <script type="text/javascript" src="../src/dep.js"></script>
     <script type="text/javascript" src="../src/observer.js"></script>
@@ -19,16 +20,19 @@
         let vm = new Hue({
             el: '.test',
             data: {
-                hello: "Hello world!"
+                user: {
+                    name: 'Jack',
+                    age: '18'
+                }
             }
         });
 
-        vm.$watch("hello", function () {
+        vm.$watch('user.name', function () {
             console.log("My GitHub is https://github.com/hanrenguang!");
         });
 
         setTimeout(function () {
-            vm.hello = "https://github.com/hanrenguang";
+            vm.user.name = 'Tom';
         }, 3000);
     </script>
 </body>
