@@ -169,6 +169,7 @@ let compileUtil = {
         // 获取更新视图的回调函数
         let updaterFn = updater[dir + 'Updater'];
 
+        // 先调用一次 updaterFn，更新视图
         updaterFn && updaterFn(node, this._getVMVal(vm, exp));
 
         // 添加 Watcher 订阅
