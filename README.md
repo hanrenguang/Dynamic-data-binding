@@ -50,7 +50,7 @@
 </html>
 ```
 
-接下来都将以其为例来分析。下面来看一个简略的 `MVVM` 的实现，在此将其命名为 `hue`。为了方便起见，为 `data` 属性设置了一个代理，通过 `vm._data` 来访问 `data` 的属性显得麻烦且冗余，通过代理，可以很好地解决这个问题，在注释中也有说明。添加完属性代理后，调用了一个 `observe` 函数，这一步做的就是 `Observer` 的属性劫持了，这一步具体怎么实现，暂时先不展开。先记住他为 `data` 的属性添加了 `getter` 和 `setter`。再往下看，`new` 了一个 `Compile`，下面我们就来讲讲 `Compile`。
+接下来都将以其为例来分析。下面来看一个简略的 `MVVM` 的实现，在此将其命名为 `hue`。为了方便起见，为 `data` 属性设置了一个代理，通过 `vm._data` 来访问 `data` 的属性显得麻烦且冗余，通过代理，可以很好地解决这个问题，在注释中也有说明。添加完属性代理后，调用了一个 `observe` 函数，这一步做的就是 `Observer` 的属性劫持了，这一步具体怎么实现，暂时先不展开。先记住他为 `data` 的属性添加了 `getter` 和 `setter`。
 
 ```javascript
 function Hue(options) {
@@ -68,8 +68,8 @@ function Hue(options) {
 }
 
 // 为 data 做了一个代理，
-// 访问 vm.data 会触发 vm._data 的getter，取得 vm._data 的值，
-// 为 vm.data 赋值则会触发 vm._data 的setter
+// 访问 vm.xxx 会触发 vm._data[xxx] 的getter，取得 vm._data[xxx] 的值，
+// 为 vm.xxx 赋值则会触发 vm._data[xxx] 的setter
 Hue.prototype._proxyData = function(key) {
     let self = this;
     Object.defineProperty(self, key, {
@@ -84,6 +84,8 @@ Hue.prototype._proxyData = function(key) {
     });
 };
 ```
+
+再往下看，最后一步 `new` 了一个 `Compile`，下面我们就来讲讲 `Compile`。
 
 ## Compile
 
