@@ -202,11 +202,11 @@ let updater = {
 };
 ```
 
-正如代码中所看到的，`Compile` 在解析到 `{{xxx}}` 后便添加了 `xxx` 属性的订阅，即 `new Watcher(vm, exp, callback)`。理解了这一步后，接下来就需要了解怎么实现相关属性的订阅了。
+正如代码中所看到的，`Compile` 在解析到 `{{xxx}}` 后便添加了 `xxx` 属性的订阅，即 `new Watcher(vm, exp, callback)`。理解了这一步后，接下来就需要了解怎么实现相关属性的订阅了。先从 `Observer` 开始谈起。
 
-<!-- ## Observer & Dep
+## Observer
 
-从最简单的情况来考虑，即不考虑数组元素的变化。首先需要了解的知识是 `Object.defineProperty` 这个方法，通过该方法给所有属性添加 `getter` 和 `setter`，就达到了我们的目的。属性有可能也是对象，因此需要对属性值进行递归调用。下面来看看具体代码：
+从最简单的情况来考虑，即不考虑数组元素的变化。暂时先不考虑 `Dep` 与 `Observer` 的联系。先看看 `Observer` 构造函数：
 
 ```javascript
 function Observer(data) {
@@ -216,13 +216,65 @@ function Observer(data) {
 
 Observer.prototype.walk = function(data) {
     const keys = Object.keys(data);
+    // 遍历 data 的所有属性
     for (let i = 0; i < keys.length; i++) {
+        // 调用 defineReactive 添加 getter 和 setter
         defineReactive(data, keys[i], data[keys[i]]);
     }
 };
+```
 
+接下来通过 `Object.defineProperty` 方法给所有属性添加 `getter` 和 `setter`，就达到了我们的目的。属性有可能也是对象，因此需要对属性值进行递归调用。
+
+```javascript
+function defineReactive(obj, key, val) {
+    // 对属性值递归，对应属性值为对象的情况
+    let childObj = observe(val);
+
+    Object.defineProperty(obj, key, {
+        enumerable: true,
+        configurable: true,
+        get: function() {
+            // 直接返回属性值
+            return val;
+        },
+        set: function(newVal) {
+            if (newVal === val) {
+                return;
+            }
+            // 值发生变化时修改闭包中的 val，
+            // 保证在触发 getter 时返回正确的值
+            val = newVal;
+
+            // 对新赋的值进行递归，防止赋的值为对象的情况
+            childObj = observe(newVal);
+        }
+    });
+}
+```
+
+最后补充上 `observe` 函数，也即 `Hue` 构造函数中调用的 `observe` 函数：
+
+```javascript
+function observe(val) {
+    // 若 val 是对象且非数组，则 new 一个 Observer 实例，val 作为参数
+    // 简单点说：是对象就继续。
+    if (!Array.isArray(val) && typeof val === "object") {
+        return new Observer(val);
+    }
+}
+```
+
+这样一来就对 `data` 的所有子孙属性（不知有没有这种说法。。）都进行了“劫持”。显然到目前为止，这并没什么用，或者说如果只做到这里，那么和什么都不做没差别。于是 `Dep` 上场了。我认为理解 `Dep` 与 `Observer` 和 `Watcher` 之间的联系是最重要的，先来谈谈 `Dep` 在 `Observer` 里做了什么。
+
+## Observer & Dep
+
+在每一次 `defineReactive` 函数被调用之后，都会在闭包中新建一个 `Dep` 实例，即 `let dep = new Dep()`。`Dep` 提供了一些方法，先来说说 `notify` 这个方法，它做了什么事？就是在属性值发生变化的时候通知 `Dep`，那么我们的代码可以增加如下：
+
+```javascript
 function defineReactive(obj, key, val) {
     let childObj = observe(val);
+    const dep = new Dep();
 
     Object.defineProperty(obj, key, {
         enumerable: true,
@@ -237,14 +289,174 @@ function defineReactive(obj, key, val) {
 
             val = newVal;
             childObj = observe(newVal);
+
+            // 发生变动
+            dep.notify();
         }
     });
 }
+```
 
-function observe(val) {
-    if (!Array.isArray(val) && typeof val === "object") {
-        return new Observer(val);
+如果仅考虑 `Observer` 与 `Dep` 的联系，即有变动时通知 `Dep`，那么这里就算完了，然而在 `vue.js` 的源码中，我们还可以看到一段增加在 `getter` 中的代码：
+
+```javascript
+// ...
+get: function() {
+    if (Dep.target) {
+        dep.depend();
     }
+    return val;
+}
+// ...
+```
+
+这个 `depend` 方法呢，它又做了啥？答案是为闭包中的 `Dep` 实例添加了一个 `Watcher` 的订阅，而 `Dep.target` 又是啥？他其实是一个 `Watcher` 实例，？？？一脸懵逼，先记住就好，先看一部份的 `Dep` 源码：
+
+```javascript
+// 标识符，在 Watcher 中有用到，先不用管
+let uid = 0;
+
+function Dep() {
+    this.id = uid++;
+    this.subs = [];
 }
 
-``` -->
+Dep.prototype.depend = function() {
+    // 这一步相当于做了这么一件事：this.subs.push(Dep.target)
+    // 即添加了 Watcher 订阅，addDep 是 Watcher 的方法
+    Dep.target.addDep(this);
+};
+
+// 通知更新
+Dep.prototype.notify = function() {
+    // this.subs 的每一项都为一个 Watcher 实例
+    this.subs.forEach(function(sub) {
+        // update 为 Watcher 的一个方法，更新视图
+        // 没错，实际上这个方法最终会调用到 Compile 中的 updaterFn，
+        // 也即 new Watcher(vm, exp, callback) 中的 callback
+        sub.update();
+    });
+};
+
+// 在 Watcher 中调用
+Dep.prototype.addSub = function(sub) {
+    this.subs.push(sub);
+};
+
+// 初始时引用为空
+Dep.target = null;
+```
+
+也许看到这还是一脸懵逼，没关系，接着往下。大概有同学会疑惑，为什么要把添加 `Watcher` 订阅放在 `getter` 中，接下来我们来说说这 `Watcher` 和 `Dep` 的故事。
+
+## Watcher & Dep
+
+先让我们回顾一下 `Compile` 做的事，解析 `fragment`，然后给相应属性添加订阅：`new Watcher(vm, exp, cb)`。`new` 了这个 `Watcher` 之后，`Watcher` 怎么办呢，就有了下面这样的对话：
+
+Watcher：hey `Dep`，我需要订阅 `exp` 属性的变动。
+
+Dep：这我可做不到，你得去找 `exp` 属性中的 `dep`，他能做到这件事。
+
+Watcher：可是他在闭包中啊，我无法和他联系。
+
+Dep：你拿到了整个 `Hue` 实例 `vm`，又知道属性 `exp`，你可以触发他的 `getter` 啊，你在 `getter` 里动些手脚不就行了。
+
+Watcher：有道理，可是我得让 `dep` 知道是我订阅的啊，不然他通知不到我。
+
+Dep：这个简单，我帮你，你每次触发 `getter` 前，把你的引用告诉 `Dep.target` 就行了。记得办完事后给 `Dep.target` 置空。
+
+于是就有了上面 `getter` 中的代码：
+
+```javascript
+// ...
+get: function() {
+    // 是否是 Watcher 触发的
+    if (Dep.target) {
+        // 是就添加进来
+        dep.depend();
+    }
+    return val;
+}
+// ...
+```
+
+现在再回头看看 `Dep` 部分的代码，是不是好理解些了。如此一来， `Watcher` 需要做的事情就简单明了了：
+
+```javascript
+function Watcher(vm, exp, cb) {
+    this.$vm = vm;
+    this.cb = cb;
+    this.exp = exp;
+    this.depIds = new Set();
+
+    // 返回一个用于获取相应属性值的函数
+    this.getter = parseGetter(exp.trim());
+
+    // 调用 get 方法，触发 getter
+    this.value = this.get();
+}
+
+Watcher.prototype.get = function() {
+    const vm = this.$vm;
+    // 将 Dep.target 指向当前 Watcher 实例
+    Dep.target = this;
+    // 触发 getter
+    let value = this.getter.call(vm, vm);
+    // Dep.target 置空
+    Dep.target = null;
+    return value;
+};
+
+Watcher.prototype.addDep = function(dep) {
+    const id = dep.id;
+    if (!this.depIds.has(id)) {
+        // 添加订阅，相当于 dep.subs.push(this)
+        dep.addSub(this);
+        this.depIds.add(id);
+    }
+};
+
+function parseGetter(exp) {
+    if (/[^\w.$]/.test(exp)) {
+        return;
+    }
+
+    let exps = exp.split(".");
+
+    return function(obj) {
+        for (let i = 0; i < exps.length; i++) {
+            if (!obj)
+                return;
+            obj = obj[exps[i]];
+        }
+        return obj;
+    };
+}
+```
+
+最后还差一部分，即 `Dep` 通知变化后，`Watcher` 的处理，具体的函数调用流程是这样的：`dep.notify()` -> `sub.update()`，直接上代码：
+
+```javascript
+Watcher.prototype.update = function() {
+    this.run();
+};
+
+Watcher.prototype.run = function() {
+    let value = this.get();
+    let oldVal = this.value;
+
+    if (value !== oldVal) {
+        this.value = value;
+        // 调用回调函数更新视图
+        this.cb.call(this.$vm, value, oldVal);
+    }
+};
+```
+
+## 结语
+
+到这就算写完了，我水平有限，若有不足之处欢迎指出，一起探讨。
+
+## 参考资料
+
+[https://github.com/DMQ/mvvm](https://github.com/DMQ/mvvm)
