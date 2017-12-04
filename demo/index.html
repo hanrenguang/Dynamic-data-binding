@@ -11,11 +11,7 @@
         <p>{{user.name}}</p>
         <p>{{user.age}}</p>
     </div>
-    <script type="text/javascript" src="../src/dep.js"></script>
-    <script type="text/javascript" src="../src/observer.js"></script>
-    <script type="text/javascript" src="../src/watcher.js"></script>
-    <script type="text/javascript" src="../src/compile.js"></script>
-    <script type="text/javascript" src="../src/hue.js"></script>
+    <script type="text/javascript" src="../ddb.js"></script>
     <script type="text/javascript">
         let vm = new Hue({
             el: '.test',
@@ -28,7 +24,7 @@
         });
 
         vm.$watch('user.name', function () {
-            console.log("My GitHub is https://github.com/hanrenguang!");
+            console.log("My GitHub is https://github.com/hanrenguang");
         });
 
         setTimeout(function () {
